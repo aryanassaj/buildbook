@@ -66,7 +66,7 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-8 max-w-2xl">
       <div className="mb-6">
         <h1 className="text-white text-xl font-semibold">New project</h1>
         <p className="text-neutral-500 text-sm mt-0.5">Document a new engineering project</p>

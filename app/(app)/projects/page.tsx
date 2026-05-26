@@ -39,7 +39,7 @@ export default function ProjectsPage() {
   }, [search, status]);
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-white text-xl font-semibold">Projects</h1>

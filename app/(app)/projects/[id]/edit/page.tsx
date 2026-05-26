@@ -94,7 +94,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   if (!project) return null;
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-8 max-w-2xl">
       <div className="mb-6">
         <div className="flex items-center gap-2 text-sm text-neutral-500 mb-1">
           <Link href="/projects" className="hover:text-neutral-300 transition-colors">Projects</Link>

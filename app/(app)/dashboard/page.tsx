@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const approvedDevices = devices.filter((d) => d.status === "APPROVED").length;
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-8 max-w-5xl">
       <div className="mb-8">
         <h1 className="text-white text-xl font-semibold">Dashboard</h1>
         <p className="text-neutral-500 text-sm mt-0.5">Overview of all your projects</p>

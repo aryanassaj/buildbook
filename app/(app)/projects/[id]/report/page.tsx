@@ -84,7 +84,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         }
       `}</style>
 
-      <div className="p-8 max-w-6xl">
+      <div className="p-4 sm:p-8 max-w-6xl">
         {/* Header */}
         <div className="flex items-start justify-between mb-6 no-print">
           <div>
