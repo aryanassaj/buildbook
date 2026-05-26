@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getFingerprint } from "@/lib/fingerprint";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const fingerprint = localStorage.getItem("bb_fingerprint");
+    const fingerprint = localStorage.getItem("bb_fingerprint") ?? document.cookie.match(/(?:^|;\s*)bb_fingerprint=([^;]+)/)?.[1] ?? null;
     if (!fingerprint) {
       setError("This device has never been registered. Use Join to get access.");
       setLoading(false);

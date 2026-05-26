@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getFingerprint } from "@/lib/fingerprint";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -122,12 +123,3 @@ function Field({
   );
 }
 
-function getFingerprint(): string {
-  const key = "bb_fingerprint";
-  let fp = localStorage.getItem(key);
-  if (!fp) {
-    fp = crypto.randomUUID();
-    localStorage.setItem(key, fp);
-  }
-  return fp;
-}

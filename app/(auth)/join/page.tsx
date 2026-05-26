@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getFingerprint } from "@/lib/fingerprint";
 
 type Stage = "form" | "pending" | "approved" | "revoked";
 
@@ -16,7 +17,7 @@ export default function JoinPage() {
 
   // If this device has already been registered, send to login instead
   useEffect(() => {
-    const fp = localStorage.getItem("bb_fingerprint");
+    const fp = localStorage.getItem("bb_fingerprint") ?? document.cookie.match(/(?:^|;\s*)bb_fingerprint=([^;]+)/)?.[1];
     if (fp) router.replace("/login");
   }, [router]);
 
@@ -175,12 +176,3 @@ export default function JoinPage() {
   );
 }
 
-function getFingerprint(): string {
-  const key = "bb_fingerprint";
-  let fp = localStorage.getItem(key);
-  if (!fp) {
-    fp = crypto.randomUUID();
-    localStorage.setItem(key, fp);
-  }
-  return fp;
-}
