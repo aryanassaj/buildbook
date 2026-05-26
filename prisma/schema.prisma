@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  companyCode  String   @unique
+  adminEmail   String
+  passphrase   String
+  createdAt    DateTime @default(now())
+
+  devices  Device[]
+  projects Project[]
+}
+
+model Device {
+  id          String       @id @default(cuid())
+  companyId   String
+  deviceName  String
+  fingerprint String       @unique
+  role        Role         @default(ENGINEER)
+  status      DeviceStatus @default(PENDING)
+  token       String?      @unique
+  lastActive  DateTime?
+  createdAt   DateTime     @default(now())
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  projects Project[]
+  reports  Report[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  companyId   String
+  deviceId    String
+  name        String
+  description String
+  techStack   Json          @default("[]")
+  metrics     String?
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  company Company  @relation(fields: [companyId], references: [id])
+  device  Device   @relation(fields: [deviceId], references: [id])
+  files   File[]
+  reports Report[]
+}
+
+model File {
+  id          String     @id @default(cuid())
+  projectId   String
+  bucket      Bucket
+  filename    String
+  storageUrl  String
+  sizeBytes   Int
+  contentType String
+  uploadedAt  DateTime   @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id              String   @id @default(cuid())
+  projectId       String
+  deviceId        String
+  version         Int      @default(1)
+  markdownContent String
+  pdfUrl          String?
+  generatedAt     DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  device  Device  @relation(fields: [deviceId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  ENGINEER
+}
+
+enum DeviceStatus {
+  PENDING
+  APPROVED
+  REVOKED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum Bucket {
+  INFRASTRUCTURE
+  FRONTEND
+  BACKEND_API
+  DATABASE
+  DEPLOYMENT
+  MONITORING
+  TESTING
+  DESIGN
+  OTHER
+}
