@@ -41,6 +41,7 @@ export default function RegisterPage() {
       localStorage.setItem("bb_role", json.role);
       localStorage.setItem("bb_device_id", json.deviceId);
       localStorage.setItem("bb_company_code", json.companyCode);
+      document.cookie = `bb_token=${json.token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
 
       router.push("/dashboard");
     } catch {

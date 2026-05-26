@@ -26,6 +26,7 @@ export default function JoinPage() {
       if (json.status === "APPROVED") {
         localStorage.setItem("bb_token", json.token);
         localStorage.setItem("bb_role", json.role);
+        document.cookie = `bb_token=${json.token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
         setStage("approved");
         clearInterval(interval);
         setTimeout(() => router.push("/dashboard"), 1500);
@@ -68,6 +69,7 @@ export default function JoinPage() {
       if (json.status === "APPROVED" && json.token) {
         localStorage.setItem("bb_token", json.token);
         localStorage.setItem("bb_role", json.role);
+        document.cookie = `bb_token=${json.token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
         router.push("/dashboard");
         return;
       }

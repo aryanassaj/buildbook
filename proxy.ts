@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/auth";
 const PUBLIC_PATHS = ["/register", "/join"];
 const API_PUBLIC = ["/api/auth/register", "/api/auth/join"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public auth pages and API routes
