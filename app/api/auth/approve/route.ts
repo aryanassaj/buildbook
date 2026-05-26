@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/rbac";
+import { requireManager } from "@/lib/rbac";
 import { signToken } from "@/lib/auth";
 import { Role } from "@/lib/generated/prisma/client";
 
-export const POST = requireAdmin(async (req, _ctx) => {
+export const POST = requireManager(async (req, _ctx) => {
   const body = await req.json();
   const { deviceId, role, action } = body as {
     deviceId: string;

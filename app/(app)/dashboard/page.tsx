@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
+import { useAuth } from "@/components/providers/auth-provider";
 
 interface Project {
   id: string;
@@ -14,20 +15,36 @@ interface Project {
   techStack: string[];
 }
 
+interface Device {
+  id: string;
+  status: "PENDING" | "APPROVED" | "REVOKED";
+  _count: { projects: number };
+}
+
 export default function DashboardPage() {
+  const { role } = useAuth();
+  const isManager = role === "ADMIN" || role === "MANAGER";
+
   const [projects, setProjects] = useState<Project[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Project[]>("/api/projects")
-      .then(setProjects)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    const requests: Promise<unknown>[] = [
+      api.get<Project[]>("/api/projects").then(setProjects),
+    ];
+    if (isManager) {
+      requests.push(api.get<Device[]>("/api/devices").then(setDevices));
+    }
+    Promise.allSettled(requests).finally(() => setLoading(false));
+  }, [isManager]);
 
   const total = projects.length;
   const active = projects.filter((p) => p.status === "ACTIVE").length;
   const completed = projects.filter((p) => p.status === "COMPLETED").length;
+  const totalFiles = projects.reduce((sum, p) => sum + p._count.files, 0);
+  const pendingDevices = devices.filter((d) => d.status === "PENDING").length;
+  const approvedDevices = devices.filter((d) => d.status === "APPROVED").length;
 
   return (
     <div className="p-8 max-w-5xl">
@@ -36,11 +53,34 @@ export default function DashboardPage() {
         <p className="text-neutral-500 text-sm mt-0.5">Overview of all your projects</p>
       </div>
 
+      {/* Pending approval alert */}
+      {!loading && isManager && pendingDevices > 0 && (
+        <Link
+          href="/devices"
+          className="flex items-center gap-2 border border-yellow-800/50 bg-yellow-950/20 px-4 py-3 text-sm text-yellow-300 mb-6 hover:bg-yellow-950/30 transition-colors"
+        >
+          <span className="text-yellow-500">●</span>
+          {pendingDevices} device{pendingDevices !== 1 ? "s" : ""} waiting for approval
+          <span className="ml-auto text-yellow-600 text-xs">Review →</span>
+        </Link>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className={`grid gap-4 mb-8 ${isManager ? "grid-cols-5" : "grid-cols-3"}`}>
         <Stat label="Total projects" value={total} loading={loading} />
         <Stat label="Active" value={active} loading={loading} />
         <Stat label="Completed" value={completed} loading={loading} />
+        {isManager && (
+          <>
+            <Stat label="Total files" value={totalFiles} loading={loading} />
+            <Stat
+              label="Team members"
+              value={approvedDevices}
+              loading={loading}
+              href="/devices"
+            />
+          </>
+        )}
       </div>
 
       {/* Recent projects */}
@@ -93,9 +133,19 @@ export default function DashboardPage() {
   );
 }
 
-function Stat({ label, value, loading }: { label: string; value: number; loading: boolean }) {
-  return (
-    <div className="border border-neutral-800 bg-neutral-900 px-4 py-4">
+function Stat({
+  label,
+  value,
+  loading,
+  href,
+}: {
+  label: string;
+  value: number;
+  loading: boolean;
+  href?: string;
+}) {
+  const content = (
+    <div className={`border border-neutral-800 bg-neutral-900 px-4 py-4 ${href ? "hover:bg-neutral-800 transition-colors cursor-pointer" : ""}`}>
       <p className="text-neutral-500 text-xs mb-1">{label}</p>
       {loading ? (
         <div className="h-7 w-8 bg-neutral-800 animate-pulse" />
@@ -104,6 +154,7 @@ function Stat({ label, value, loading }: { label: string; value: number; loading
       )}
     </div>
   );
+  return href ? <Link href={href}>{content}</Link> : content;
 }
 
 function StatusDot({ status }: { status: string }) {
