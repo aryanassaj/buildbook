@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const SYSTEM_PROMPT = `You are a senior technical writer specializing in software engineering documentation. Generate structured, professional project documentation reports from provided metadata.
 
@@ -58,24 +58,11 @@ export async function generateProjectReport(input: ReportInput): Promise<string>
 **Uploaded Files by Category:**
 ${fileSummary || "No files uploaded yet"}`;
 
-  const stream = anthropic.messages.stream({
-    model: "claude-opus-4-7",
-    max_tokens: 2000,
-    thinking: { type: "adaptive" },
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [{ role: "user", content: userMessage }],
+  const model = genai.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    systemInstruction: SYSTEM_PROMPT,
   });
 
-  const message = await stream.finalMessage();
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text content in AI response");
-  }
-  return textBlock.text;
+  const result = await model.generateContent(userMessage);
+  return result.response.text();
 }
