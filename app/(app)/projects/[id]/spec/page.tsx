@@ -7,12 +7,14 @@ import { api } from "@/lib/api-client";
 import { useAuth } from "@/components/providers/auth-provider";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import MermaidDiagram from "@/components/mermaid-diagram";
 
 interface Spec {
   id: string;
   version: number;
   inputText: string;
   markdownContent: string;
+  diagramCode: string | null;
   status: "DRAFT" | "IN_REVIEW" | "APPROVED";
   generatedAt: string;
 }
@@ -36,7 +38,9 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
   const [projectName, setProjectName] = useState("");
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [generatingDiagram, setGeneratingDiagram] = useState(false);
   const [mode, setMode] = useState<"view" | "new">("view");
+  const [activeTab, setActiveTab] = useState<"spec" | "diagram">("spec");
 
   // Input state
   const [draftText, setDraftText] = useState("");
@@ -83,6 +87,25 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
     const updated = await api.patch<Spec>(`/api/projects/${id}/spec/${activeSpec.id}`, { status });
     setActiveSpec(updated);
     setSpecs((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+  }
+
+  async function handleGenerateDiagram() {
+    if (!activeSpec) return;
+    setGeneratingDiagram(true);
+    try {
+      const { diagramCode } = await api.post<{ diagramCode: string }>(
+        `/api/projects/${id}/spec/${activeSpec.id}/diagram`,
+        {}
+      );
+      const updated = { ...activeSpec, diagramCode };
+      setActiveSpec(updated);
+      setSpecs((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+      setActiveTab("diagram");
+    } catch (err) {
+      console.error("Diagram generation failed:", err);
+    } finally {
+      setGeneratingDiagram(false);
+    }
   }
 
   if (loading) {
@@ -149,6 +172,13 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
                     Revert to draft
                   </button>
                 )}
+                <button
+                  onClick={handleGenerateDiagram}
+                  disabled={generatingDiagram}
+                  className="text-sm text-neutral-300 border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                >
+                  {generatingDiagram ? "Generating…" : activeSpec.diagramCode ? "Regenerate diagram" : "Generate diagram"}
+                </button>
                 <button
                   onClick={() => window.print()}
                   className="text-sm text-neutral-300 border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800 transition-colors"
@@ -261,36 +291,74 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
 
             {/* Rendered spec */}
             <div className="flex-1 min-w-0">
-              <div className="prose prose-invert prose-sm max-w-none
-                prose-headings:font-semibold prose-headings:text-white
-                prose-h1:text-xl prose-h2:text-base prose-h2:border-b prose-h2:border-neutral-800 prose-h2:pb-1.5 prose-h2:mb-3
-                prose-h3:text-sm prose-h3:text-neutral-200
-                prose-p:text-neutral-300 prose-p:leading-relaxed
-                prose-li:text-neutral-300
-                prose-strong:text-white prose-strong:font-semibold
-                prose-code:text-neutral-300 prose-code:bg-neutral-900 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none
-                prose-pre:bg-neutral-900 prose-pre:border prose-pre:border-neutral-800
-                prose-table:text-sm prose-table:border prose-table:border-neutral-800
-                prose-th:bg-neutral-900 prose-th:text-neutral-300 prose-th:font-medium prose-th:px-3 prose-th:py-2 prose-th:border prose-th:border-neutral-800
-                prose-td:text-neutral-400 prose-td:px-3 prose-td:py-2 prose-td:border prose-td:border-neutral-800
-                prose-hr:border-neutral-800
-                prose-blockquote:border-l-neutral-700 prose-blockquote:text-neutral-400
-                prose-a:text-neutral-300 prose-a:no-underline hover:prose-a:underline
-                [&_input[type=checkbox]]:mr-2">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {activeSpec.markdownContent}
-                </ReactMarkdown>
+              {/* Tabs */}
+              <div className="flex gap-4 border-b border-neutral-800 mb-6 no-print">
+                <button
+                  onClick={() => setActiveTab("spec")}
+                  className={`text-sm pb-2 border-b-2 transition-colors ${activeTab === "spec" ? "border-white text-white" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+                >
+                  Spec
+                </button>
+                <button
+                  onClick={() => setActiveTab("diagram")}
+                  className={`text-sm pb-2 border-b-2 transition-colors ${activeTab === "diagram" ? "border-white text-white" : "border-transparent text-neutral-500 hover:text-neutral-300"}`}
+                >
+                  Diagram
+                  {!activeSpec.diagramCode && <span className="ml-1.5 text-xs text-neutral-600">not generated</span>}
+                </button>
               </div>
 
-              {/* Original draft toggle */}
-              <details className="mt-8 no-print">
-                <summary className="text-neutral-600 text-xs cursor-pointer hover:text-neutral-400 transition-colors">
-                  View original draft input
-                </summary>
-                <pre className="mt-2 text-neutral-600 text-xs bg-neutral-900 border border-neutral-800 p-3 whitespace-pre-wrap font-mono">
-                  {activeSpec.inputText}
-                </pre>
-              </details>
+              {activeTab === "diagram" && (
+                <div className="no-print">
+                  {activeSpec.diagramCode ? (
+                    <MermaidDiagram code={activeSpec.diagramCode} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 border border-neutral-800 border-dashed">
+                      <p className="text-neutral-500 text-sm mb-3">No diagram generated yet</p>
+                      <button
+                        onClick={handleGenerateDiagram}
+                        disabled={generatingDiagram}
+                        className="text-sm bg-white text-black px-4 py-2 font-medium hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                      >
+                        {generatingDiagram ? "Generating…" : "Generate diagram"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "spec" && (
+                <>
+                  <div className="prose prose-invert prose-sm max-w-none
+                    prose-headings:font-semibold prose-headings:text-white
+                    prose-h1:text-xl prose-h2:text-base prose-h2:border-b prose-h2:border-neutral-800 prose-h2:pb-1.5 prose-h2:mb-3
+                    prose-h3:text-sm prose-h3:text-neutral-200
+                    prose-p:text-neutral-300 prose-p:leading-relaxed
+                    prose-li:text-neutral-300
+                    prose-strong:text-white prose-strong:font-semibold
+                    prose-code:text-neutral-300 prose-code:bg-neutral-900 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none
+                    prose-pre:bg-neutral-900 prose-pre:border prose-pre:border-neutral-800
+                    prose-table:text-sm prose-table:border prose-table:border-neutral-800
+                    prose-th:bg-neutral-900 prose-th:text-neutral-300 prose-th:font-medium prose-th:px-3 prose-th:py-2 prose-th:border prose-th:border-neutral-800
+                    prose-td:text-neutral-400 prose-td:px-3 prose-td:py-2 prose-td:border prose-td:border-neutral-800
+                    prose-hr:border-neutral-800
+                    prose-blockquote:border-l-neutral-700 prose-blockquote:text-neutral-400
+                    prose-a:text-neutral-300 prose-a:no-underline hover:prose-a:underline
+                    [&_input[type=checkbox]]:mr-2">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {activeSpec.markdownContent}
+                    </ReactMarkdown>
+                  </div>
+                  <details className="mt-8 no-print">
+                    <summary className="text-neutral-600 text-xs cursor-pointer hover:text-neutral-400 transition-colors">
+                      View original draft input
+                    </summary>
+                    <pre className="mt-2 text-neutral-600 text-xs bg-neutral-900 border border-neutral-800 p-3 whitespace-pre-wrap font-mono">
+                      {activeSpec.inputText}
+                    </pre>
+                  </details>
+                </>
+              )}
             </div>
           </div>
         )}

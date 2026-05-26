@@ -88,6 +88,7 @@ model Spec {
   version         Int        @default(1)
   inputText       String
   markdownContent String
+  diagramCode     String?
   status          SpecStatus @default(DRAFT)
   generatedAt     DateTime   @default(now())
 
