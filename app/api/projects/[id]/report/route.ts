@@ -47,7 +47,9 @@ export const POST = requireAuth(async (req, ctx) => {
 
   const nextVersion = (project.reports[0]?.version ?? 0) + 1;
 
-  const markdownContent = await generateProjectReport({
+  let markdownContent: string;
+  try {
+    markdownContent = await generateProjectReport({
     projectName: project.name,
     description: project.description,
     techStack: project.techStack as string[],
@@ -58,7 +60,11 @@ export const POST = requireAuth(async (req, ctx) => {
       bucket: f.bucket as string,
       sizeBytes: f.sizeBytes,
     })),
-  });
+    });
+  } catch (err) {
+    console.error("[report generation error]", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 
   const report = await prisma.report.create({
     data: {

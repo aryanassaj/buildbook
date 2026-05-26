@@ -59,7 +59,7 @@ export async function generateProjectReport(input: ReportInput): Promise<string>
 ${fileSummary || "No files uploaded yet"}`;
 
   const model = genai.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     systemInstruction: SYSTEM_PROMPT,
   });
 
