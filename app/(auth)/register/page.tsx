@@ -55,9 +55,13 @@ export default function RegisterPage() {
     <div className="bg-neutral-900 border border-neutral-800 p-8">
       <h2 className="text-white text-lg font-medium mb-1">Create your company account</h2>
       <p className="text-neutral-400 text-sm mb-6">
-        Already have a code?{" "}
+        Already registered?{" "}
+        <Link href="/login" className="text-white underline underline-offset-2">
+          Sign in
+        </Link>
+        {" "}or{" "}
         <Link href="/join" className="text-white underline underline-offset-2">
-          Join existing company
+          join with a company code
         </Link>
       </p>
 

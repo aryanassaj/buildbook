@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/register", "/join"];
-const API_PUBLIC = ["/api/auth/register", "/api/auth/join"];
+const PUBLIC_PATHS = ["/register", "/join", "/login"];
+const API_PUBLIC = ["/api/auth/register", "/api/auth/join", "/api/auth/login"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -18,12 +18,12 @@ export async function proxy(req: NextRequest) {
   // For page routes, check token in cookie (set client-side after login)
   const token = req.cookies.get("bb_token")?.value;
   if (!token) {
-    return NextResponse.redirect(new URL("/register", req.url));
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   const device = await verifyToken(token);
   if (!device) {
-    const res = NextResponse.redirect(new URL("/register", req.url));
+    const res = NextResponse.redirect(new URL("/login", req.url));
     res.cookies.delete("bb_token");
     return res;
   }

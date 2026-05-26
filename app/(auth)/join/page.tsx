@@ -123,9 +123,13 @@ export default function JoinPage() {
     <div className="bg-neutral-900 border border-neutral-800 p-8">
       <h2 className="text-white text-lg font-medium mb-1">Join your company</h2>
       <p className="text-neutral-400 text-sm mb-6">
-        No account yet?{" "}
+        Already registered?{" "}
+        <Link href="/login" className="text-white underline underline-offset-2">
+          Sign in
+        </Link>
+        {" "}or{" "}
         <Link href="/register" className="text-white underline underline-offset-2">
-          Register your company
+          register a new company
         </Link>
       </p>
 
