@@ -59,18 +59,18 @@ export const PUT = requireAuth(async (req, ctx) => {
   return NextResponse.json(updated);
 });
 
-// DELETE /api/projects/[id]
+// DELETE /api/projects/[id] — manager+ only
 export const DELETE = requireAuth(async (req, ctx) => {
   const { id } = await (ctx as Ctx).params;
-  const { deviceId, companyId, role } = req.device;
+  const { companyId, role } = req.device;
+
+  if (role === Role.ENGINEER) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project || project.companyId !== companyId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  if (role === Role.ENGINEER && project.deviceId !== deviceId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await prisma.project.delete({ where: { id } });

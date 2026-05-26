@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/providers/auth-provider";
 
 const BUCKETS = [
   "INFRASTRUCTURE", "FRONTEND", "BACKEND_API", "DATABASE",
@@ -51,12 +52,15 @@ const BUCKET_LABELS: Record<BucketName, string> = {
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { role } = useAuth();
+  const isManager = role === "ADMIN" || role === "MANAGER";
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeBucket, setActiveBucket] = useState<BucketName>("INFRASTRUCTURE");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     api.get<Project>(`/api/projects/${id}`)
@@ -175,6 +179,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           >
             Edit
           </Link>
+          {isManager && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="text-sm text-red-400 border border-red-900 px-3 py-1.5 hover:bg-red-950 transition-colors"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -284,6 +296,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           />
         </div>
       </div>
+
+      {showDeleteModal && project && (
+        <DeleteModal
+          projectName={project.name}
+          onConfirm={async () => {
+            await api.delete(`/api/projects/${id}`);
+            router.push("/projects");
+          }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -346,6 +369,63 @@ function FileCard({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function DeleteModal({
+  projectName,
+  onConfirm,
+  onCancel,
+}: {
+  projectName: string;
+  onConfirm: () => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+      <div className="bg-neutral-950 border border-neutral-800 p-6 w-full max-w-md">
+        <h2 className="text-white text-base font-semibold mb-1">Delete project</h2>
+        <p className="text-neutral-400 text-sm mb-4">
+          This will permanently delete <span className="text-white">{projectName}</span> and all its files, specs, and reports. This cannot be undone.
+        </p>
+        <p className="text-neutral-500 text-xs mb-2">
+          Type <span className="text-neutral-300 font-mono">{projectName}</span> to confirm
+        </p>
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={projectName}
+          className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-red-800 placeholder:text-neutral-600 mb-4"
+        />
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            className="text-sm text-neutral-400 border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={value !== projectName || deleting}
+            className="text-sm text-red-400 border border-red-900 px-3 py-1.5 hover:bg-red-950 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {deleting ? "Deleting…" : "Delete project"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
