@@ -2,72 +2,68 @@
 
 import { useEffect, useRef, useState } from "react";
 
+let diagramCounter = 0;
+
 export default function MermaidDiagram({ code }: { code: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [rendered, setRendered] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!code || !containerRef.current) return;
+    setRendered(false);
     setError(null);
 
-    import("mermaid").then((m) => {
-      m.default.initialize({
-        startOnLoad: false,
-        theme: "dark",
-        darkMode: true,
-        fontFamily: "ui-monospace, monospace",
-        flowchart: { curve: "basis", padding: 20 },
-        themeVariables: {
-          background: "#0a0a0a",
-          mainBkg: "#171717",
-          nodeBorder: "#404040",
-          clusterBkg: "#111111",
-          titleColor: "#ffffff",
-          edgeLabelBackground: "#171717",
-          lineColor: "#525252",
-          primaryColor: "#1f1f1f",
-          primaryTextColor: "#e5e5e5",
-          primaryBorderColor: "#404040",
-          secondaryColor: "#141414",
-          tertiaryColor: "#0f0f0f",
-        },
-      });
+    // Prepend dark theme init directive so it works regardless of global init state
+    const themedCode = `%%{init: {'theme': 'dark', 'themeVariables': {'background': '#0a0a0a', 'mainBkg': '#171717', 'nodeBorder': '#404040', 'clusterBkg': '#0f0f0f', 'lineColor': '#525252', 'primaryColor': '#1f1f1f', 'primaryTextColor': '#e5e5e5', 'primaryBorderColor': '#404040', 'edgeLabelBackground': '#171717'}}}%%\n${code}`;
 
-      const id = `mermaid-${Date.now()}`;
-      m.default
-        .render(id, code)
-        .then(({ svg }) => {
-          if (containerRef.current) {
-            containerRef.current.innerHTML = svg;
-            // Make SVG responsive
-            const svgEl = containerRef.current.querySelector("svg");
-            if (svgEl) {
-              svgEl.style.width = "100%";
-              svgEl.style.height = "auto";
-              svgEl.style.maxWidth = "100%";
-            }
+    const id = `mermaid-diagram-${++diagramCounter}`;
+
+    import("mermaid").then(async (m) => {
+      // Reset mermaid state to avoid conflicts between renders
+      m.default.initialize({ startOnLoad: false });
+
+      try {
+        // Validate first — parse throws if syntax is invalid
+        await m.default.parse(themedCode);
+
+        const { svg } = await m.default.render(id, themedCode);
+
+        if (containerRef.current) {
+          containerRef.current.innerHTML = svg;
+          const svgEl = containerRef.current.querySelector("svg");
+          if (svgEl) {
+            svgEl.removeAttribute("height");
+            svgEl.style.width = "100%";
+            svgEl.style.height = "auto";
+            svgEl.style.maxWidth = "100%";
           }
-        })
-        .catch((err) => {
-          setError("Could not render diagram. Try regenerating it.");
-          console.error("Mermaid render error:", err);
-        });
+          setRendered(true);
+        }
+      } catch (err) {
+        console.error("Mermaid error:", err);
+        setError(err instanceof Error ? err.message : "Render failed");
+      }
     });
   }, [code]);
 
   if (error) {
     return (
-      <div className="border border-neutral-800 p-6 text-center">
-        <p className="text-neutral-500 text-sm">{error}</p>
+      <div className="border border-red-900/40 bg-neutral-950 p-6">
+        <p className="text-neutral-400 text-xs font-mono mb-3">Diagram syntax error — regenerate to fix</p>
+        <pre className="text-red-400 text-xs font-mono whitespace-pre-wrap">{error}</pre>
       </div>
     );
   }
 
   return (
     <div className="border border-neutral-800 bg-neutral-950 p-6 overflow-x-auto">
-      <div ref={containerRef} className="min-h-48 flex items-center justify-center">
-        <span className="text-neutral-600 text-sm animate-pulse">Rendering diagram…</span>
-      </div>
+      {!rendered && (
+        <div className="min-h-48 flex items-center justify-center">
+          <span className="text-neutral-600 text-sm animate-pulse">Rendering diagram…</span>
+        </div>
+      )}
+      <div ref={containerRef} className={rendered ? "" : "hidden"} />
     </div>
   );
 }

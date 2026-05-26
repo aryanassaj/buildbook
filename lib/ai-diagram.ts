@@ -4,30 +4,33 @@ const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const SYSTEM_PROMPT = `You are a technical diagram expert. Given a project spec, generate a Mermaid flowchart diagram that visually represents the system architecture.
 
-Rules:
-- Output ONLY valid Mermaid syntax — no markdown code fences, no explanation, no prose
-- Start with: flowchart TD
-- Use subgraphs to group related components (e.g. Input Layer, Agent Layer, Data Layer, Output Layer)
-- Node IDs must be alphanumeric with no spaces or special characters
-- Labels in quotes can have spaces and punctuation
-- Keep it readable — 8 to 20 nodes max
-- Use --> for arrows with labels like -->|label|
-- Represent data stores with [(name)] syntax
-- Represent decisions with {name} syntax
-- Represent processes with [name] syntax
-- Represent external systems with([name]) syntax
+Strict rules — violating any of these will break rendering:
+- Output ONLY valid Mermaid syntax — no markdown fences, no explanation, no prose, no comments
+- Start with exactly: flowchart TD
+- Node IDs: short alphanumeric only, no spaces, no hyphens (e.g. A, FIA, GForms)
+- Node labels: always wrap in double quotes if they contain spaces, hyphens, or special chars
+  GOOD: A["Google Forms"]  BAD: A[Google Forms]  BAD: A[Google-Forms]
+- Subgraph IDs: short alphanumeric only. Subgraph labels must be quoted
+  GOOD: subgraph Input["Input Layer"]  BAD: subgraph Input-Layer
+- Arrow labels: use -->|"label"| syntax, keep labels short, no hyphens in labels
+  GOOD: A -->|"form submit"| B  BAD: A -- label --> B
+- DO NOT use the -- --> arrow style, only use --> and -->|"label"|
+- Data stores: use [("Name")] syntax
+- External APIs: use (["Name"]) syntax
+- Processes: use ["Name"] syntax
+- Keep it 8 to 16 nodes max for readability
 
-Example of valid syntax:
+Example of perfectly valid output:
 flowchart TD
   subgraph Input["Input Layer"]
-    A([Google Forms])
-    B[Lambda Webhook]
+    A(["Google Forms"])
+    B["Lambda Webhook"]
   end
   subgraph Agents["Agent Layer"]
-    C[Intake Agent]
-    D[Recommendation Agent]
+    C["Intake Agent"]
+    D["Recommendation Agent"]
   end
-  A -->|form submit| B
+  A -->|"submit"| B
   B --> C
   C --> D`;
 
