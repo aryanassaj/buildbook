@@ -19,6 +19,14 @@ export async function POST(req: NextRequest) {
     if (existingDevice.companyId !== company.id) {
       return NextResponse.json({ error: "Device already registered to a different company" }, { status: 409 });
     }
+    // Let revoked devices re-request access
+    if (existingDevice.status === "REVOKED") {
+      const reset = await prisma.device.update({
+        where: { id: existingDevice.id },
+        data: { status: "PENDING", deviceName },
+      });
+      return NextResponse.json({ status: "PENDING", deviceId: reset.id, companyName: company.name });
+    }
     return NextResponse.json({
       status: existingDevice.status,
       deviceId: existingDevice.id,
