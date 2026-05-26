@@ -158,10 +158,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
+            href={`/projects/${id}/spec`}
+            className="text-sm text-neutral-300 border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800 transition-colors"
+          >
+            Spec
+          </Link>
+          <Link
             href={`/projects/${id}/report`}
             className="text-sm text-neutral-300 border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800 transition-colors"
           >
-            View report
+            Report
           </Link>
           <Link
             href={`/projects/${id}/edit`}

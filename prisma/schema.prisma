@@ -33,6 +33,7 @@ model Device {
   company  Company   @relation(fields: [companyId], references: [id])
   projects Project[]
   reports  Report[]
+  specs    Spec[]
 }
 
 model Project {
@@ -51,6 +52,7 @@ model Project {
   device  Device   @relation(fields: [deviceId], references: [id])
   files   File[]
   reports Report[]
+  specs   Spec[]
 }
 
 model File {
@@ -79,6 +81,20 @@ model Report {
   device  Device  @relation(fields: [deviceId], references: [id])
 }
 
+model Spec {
+  id              String     @id @default(cuid())
+  projectId       String
+  deviceId        String
+  version         Int        @default(1)
+  inputText       String
+  markdownContent String
+  status          SpecStatus @default(DRAFT)
+  generatedAt     DateTime   @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  device  Device  @relation(fields: [deviceId], references: [id])
+}
+
 enum Role {
   ADMIN
   MANAGER
@@ -95,6 +111,12 @@ enum ProjectStatus {
   ACTIVE
   COMPLETED
   ARCHIVED
+}
+
+enum SpecStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
 }
 
 enum Bucket {
