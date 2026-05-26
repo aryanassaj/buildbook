@@ -14,8 +14,14 @@ export default function MermaidDiagram({ code }: { code: string }) {
     setRendered(false);
     setError(null);
 
+    // Strip parentheses from edge labels — Mermaid parses ( as a node shape token
+    // even inside |...| delimiters, causing syntax errors on labels like "(Phase 2)"
+    const sanitized = code.replace(/\|([^|]*)\|/g, (_, label) =>
+      `|${label.replace(/[()]/g, "")}|`
+    );
+
     // Prepend dark theme init directive so it works regardless of global init state
-    const themedCode = `%%{init: {'theme': 'dark', 'themeVariables': {'background': '#0a0a0a', 'mainBkg': '#171717', 'nodeBorder': '#404040', 'clusterBkg': '#0f0f0f', 'lineColor': '#525252', 'primaryColor': '#1f1f1f', 'primaryTextColor': '#e5e5e5', 'primaryBorderColor': '#404040', 'edgeLabelBackground': '#171717'}}}%%\n${code}`;
+    const themedCode = `%%{init: {'theme': 'dark', 'themeVariables': {'background': '#0a0a0a', 'mainBkg': '#171717', 'nodeBorder': '#404040', 'clusterBkg': '#0f0f0f', 'lineColor': '#525252', 'primaryColor': '#1f1f1f', 'primaryTextColor': '#e5e5e5', 'primaryBorderColor': '#404040', 'edgeLabelBackground': '#171717'}}}%%\n${sanitized}`;
 
     const id = `mermaid-diagram-${++diagramCounter}`;
 

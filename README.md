@@ -46,7 +46,9 @@ Roles are set per-device at join time. Admins can change roles after the fact.
 | File storage | AWS S3 (presigned PUT uploads) |
 | AI (specs) | Google Gemini 2.5 Flash |
 | AI (reports) | Google Gemini 2.5 Flash |
+| AI (diagrams) | Google Gemini 2.5 Flash |
 | Markdown rendering | react-markdown + remark-gfm |
+| Diagram rendering | Mermaid 11 (client-side SVG) |
 | Styling | Tailwind CSS + @tailwindcss/typography |
 | Deployment | Vercel |
 
@@ -130,6 +132,25 @@ Files are uploaded directly to S3 via presigned PUT URLs — the server never pr
 - **Mark in review** moves the spec from Draft → In Review
 - **Approve** moves it from In Review → Approved
 - **Revert to draft** resets back to Draft if revisions are needed
+
+### Diagram Generator
+
+Once a spec has been generated, an architecture diagram can be produced from it automatically.
+
+**How to use:**
+1. Open a project → **Spec** tab
+2. Select a spec version — the view has two sub-tabs: **Spec** and **Diagram**
+3. Click **Generate diagram** on the Diagram tab
+4. Gemini reads the spec markdown and produces a Mermaid flowchart describing the system architecture
+5. The diagram renders as an SVG in BuildBook's dark theme — no external service required
+6. Diagrams are saved against the spec version; regenerating the spec does not overwrite an existing diagram
+
+**Rendering details:**
+- Diagrams render client-side via Mermaid 11
+- Edge labels containing parentheses (e.g. `(Phase 2)`) are automatically sanitized before rendering to prevent parse errors
+- If a diagram has a syntax error the component surfaces the raw Mermaid error message instead of a blank panel
+
+---
 
 ### Report Generator
 
@@ -256,6 +277,7 @@ Company
 | GET | `/api/projects/[id]/spec` | Required | List all spec versions |
 | POST | `/api/projects/[id]/spec` | Required | Generate new spec version |
 | PATCH | `/api/projects/[id]/spec/[specId]` | Manager+ | Update spec status |
+| POST | `/api/projects/[id]/spec/[specId]/diagram` | Required | Generate and save Mermaid diagram for a spec |
 | POST | `/api/projects/[id]/report` | Required | Generate project report |
 | GET | `/api/devices` | Admin | List all devices |
 | PATCH | `/api/devices/[id]` | Admin | Update device role or approval |
