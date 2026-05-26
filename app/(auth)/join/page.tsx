@@ -14,6 +14,12 @@ export default function JoinPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // If this device has already been registered, send to login instead
+  useEffect(() => {
+    const fp = localStorage.getItem("bb_fingerprint");
+    if (fp) router.replace("/login");
+  }, [router]);
+
   // Poll for approval if pending
   useEffect(() => {
     if (stage !== "pending") return;

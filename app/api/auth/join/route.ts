@@ -27,8 +27,11 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({ status: "PENDING", deviceId: reset.id, companyName: company.name });
     }
+    await prisma.device.update({ where: { id: existingDevice.id }, data: { lastActive: new Date() } });
     return NextResponse.json({
       status: existingDevice.status,
+      token: existingDevice.status === "APPROVED" ? existingDevice.token : undefined,
+      role: existingDevice.role,
       deviceId: existingDevice.id,
       companyName: company.name,
     });
