@@ -19,6 +19,23 @@ interface Spec {
   generatedAt: string;
 }
 
+interface Project {
+  name: string;
+  description: string;
+  techStack: string[];
+  metrics: string | null;
+  status: string;
+  createdAt: string;
+  device: { deviceName: string };
+}
+
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  PLANNING: "Planning",
+  ACTIVE: "Active",
+  ON_HOLD: "On Hold",
+  COMPLETED: "Completed",
+};
+
 const STATUS_COLORS = {
   DRAFT: "text-neutral-400 border-neutral-700",
   IN_REVIEW: "text-yellow-400 border-yellow-800",
@@ -35,7 +52,7 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
 
   const [specs, setSpecs] = useState<Spec[]>([]);
   const [activeSpec, setActiveSpec] = useState<Spec | null>(null);
-  const [projectName, setProjectName] = useState("");
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingDiagram, setGeneratingDiagram] = useState(false);
@@ -51,12 +68,12 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     Promise.all([
       api.get<Spec[]>(`/api/projects/${id}/spec`),
-      api.get<{ name: string }>(`/api/projects/${id}`),
+      api.get<Project>(`/api/projects/${id}`),
     ])
       .then(([s, proj]) => {
         setSpecs(s);
         setActiveSpec(s[0] ?? null);
-        setProjectName(proj.name);
+        setProject(proj);
         setMode(s.length === 0 ? "new" : "view");
       })
       .catch(() => router.push(`/projects/${id}`))
@@ -141,7 +158,8 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
         remaining -= pageH;
       }
 
-      pdf.save(`${projectName.replace(/\s+/g, "-").toLowerCase()}-spec-v${activeSpec.version}.pdf`);
+      const slug = (project?.name ?? "project").replace(/\s+/g, "-").toLowerCase();
+      pdf.save(`${slug}-spec-v${activeSpec.version}.pdf`);
     } catch (err) {
       console.error("PDF export failed:", err);
     } finally {
@@ -178,7 +196,7 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
             <div className="flex items-center gap-2 text-sm text-neutral-500 mb-1">
               <Link href="/projects" className="hover:text-neutral-300 transition-colors">Projects</Link>
               <span>/</span>
-              <Link href={`/projects/${id}`} className="hover:text-neutral-300 transition-colors">{projectName}</Link>
+              <Link href={`/projects/${id}`} className="hover:text-neutral-300 transition-colors">{project?.name}</Link>
               <span>/</span>
               <span className="text-neutral-300">Spec</span>
             </div>
@@ -423,12 +441,46 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           }}
         >
-          <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#0f0f0f", margin: "0 0 6px 0" }}>
-            {projectName}
+          {/* Project header */}
+          <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#0f0f0f", margin: "0 0 4px 0" }}>
+            {project?.name}
           </h1>
-          <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 24px 0" }}>
-            Implementation Spec · v{activeSpec.version} · {new Date(activeSpec.generatedAt).toLocaleDateString()} · {STATUS_LABELS[activeSpec.status]}
+          <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 20px 0" }}>
+            YAS Networks · {project ? PROJECT_STATUS_LABELS[project.status] ?? project.status : ""} · Created {project ? new Date(project.createdAt).toLocaleDateString() : ""}{project?.device?.deviceName ? ` · ${project.device.deviceName}` : ""}
           </p>
+
+          {/* Project description */}
+          {project?.description && (
+            <p style={{ fontSize: "13px", color: "#374151", lineHeight: "1.6", margin: "0 0 16px 0" }}>
+              {project.description}
+            </p>
+          )}
+
+          {/* Tech stack tags */}
+          {project?.techStack && project.techStack.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "0 0 16px 0" }}>
+              {project.techStack.map((tag) => (
+                <span key={tag} style={{ fontSize: "11px", color: "#374151", backgroundColor: "#f3f4f6", border: "1px solid #e5e7eb", padding: "2px 8px", borderRadius: "3px" }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Metrics */}
+          {project?.metrics && (
+            <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 16px 0" }}>
+              <strong style={{ color: "#374151" }}>Metrics:</strong> {project.metrics}
+            </p>
+          )}
+
+          <hr style={{ border: "none", borderTop: "1px solid #e5e5e5", margin: "0 0 16px 0" }} />
+
+          {/* Spec metadata */}
+          <p style={{ fontSize: "12px", color: "#9ca3af", margin: "0 0 28px 0" }}>
+            Implementation Spec · v{activeSpec.version} · Generated {new Date(activeSpec.generatedAt).toLocaleDateString()} · {STATUS_LABELS[activeSpec.status]}
+          </p>
+
           <hr style={{ border: "none", borderTop: "1px solid #e5e5e5", margin: "0 0 32px 0" }} />
           <div className="prose prose-sm max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
