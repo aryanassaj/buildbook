@@ -60,6 +60,19 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
   const [mode, setMode] = useState<"view" | "new">("view");
   const [activeTab, setActiveTab] = useState<"spec" | "diagram">("spec");
   const exportZoneRef = useRef<HTMLDivElement>(null);
+  const exportDiagramReadyRef = useRef(false);
+  const exportDiagramWaitersRef = useRef<Array<() => void>>([]);
+
+  // Reset diagram-ready flag whenever the active spec changes
+  useEffect(() => {
+    exportDiagramReadyRef.current = !activeSpec?.diagramCode;
+  }, [activeSpec?.id]);
+
+  function onExportDiagramReady() {
+    exportDiagramReadyRef.current = true;
+    exportDiagramWaitersRef.current.forEach((r) => r());
+    exportDiagramWaitersRef.current = [];
+  }
 
   // Input state
   const [draftText, setDraftText] = useState("");
@@ -135,6 +148,14 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
         import("jspdf"),
         import("html2canvas"),
       ]);
+
+      // Wait for the export zone's Mermaid diagram to finish rendering before capture
+      if (activeSpec.diagramCode && !exportDiagramReadyRef.current) {
+        await new Promise<void>((resolve) => {
+          exportDiagramWaitersRef.current.push(resolve);
+          setTimeout(resolve, 8000); // bail after 8s regardless
+        });
+      }
 
       const canvas = await html2canvas(exportZoneRef.current, {
         scale: 2,
@@ -431,7 +452,7 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
           ref={exportZoneRef}
           aria-hidden="true"
           style={{
-            position: "fixed",
+            position: "absolute",
             left: "-9999px",
             top: 0,
             width: "794px",
@@ -493,7 +514,7 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
               <h2 style={{ fontSize: "16px", fontWeight: 600, color: "#0f0f0f", margin: "0 0 24px 0" }}>
                 Architecture Diagram
               </h2>
-              <MermaidDiagram code={activeSpec.diagramCode} theme="light" />
+              <MermaidDiagram code={activeSpec.diagramCode} theme="light" onReady={onExportDiagramReady} />
             </div>
           )}
         </div>
