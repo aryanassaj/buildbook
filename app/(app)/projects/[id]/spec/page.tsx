@@ -162,6 +162,7 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
       pdf.save(`${slug}-spec-v${activeSpec.version}.pdf`);
     } catch (err) {
       console.error("PDF export failed:", err);
+      alert("PDF export failed — check the browser console for details.");
     } finally {
       setExporting(false);
     }
