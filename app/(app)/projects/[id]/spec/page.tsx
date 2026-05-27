@@ -39,8 +39,10 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingDiagram, setGeneratingDiagram] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [mode, setMode] = useState<"view" | "new">("view");
   const [activeTab, setActiveTab] = useState<"spec" | "diagram">("spec");
+  const exportZoneRef = useRef<HTMLDivElement>(null);
 
   // Input state
   const [draftText, setDraftText] = useState("");
@@ -105,6 +107,45 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
       console.error("Diagram generation failed:", err);
     } finally {
       setGeneratingDiagram(false);
+    }
+  }
+
+  async function handleExportPDF() {
+    if (!activeSpec || !exportZoneRef.current) return;
+    setExporting(true);
+    try {
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+
+      const canvas = await html2canvas(exportZoneRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgH = (canvas.height / canvas.width) * pageW;
+
+      let remaining = imgH;
+      let offset = 0;
+      while (remaining > 0) {
+        if (offset > 0) pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, -offset, pageW, imgH);
+        offset += pageH;
+        remaining -= pageH;
+      }
+
+      pdf.save(`${projectName.replace(/\s+/g, "-").toLowerCase()}-spec-v${activeSpec.version}.pdf`);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -180,10 +221,11 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
                   {generatingDiagram ? "Generating…" : activeSpec.diagramCode ? "Regenerate diagram" : "Generate diagram"}
                 </button>
                 <button
-                  onClick={() => window.print()}
-                  className="text-sm text-neutral-300 border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800 transition-colors"
+                  onClick={handleExportPDF}
+                  disabled={exporting}
+                  className="text-sm text-neutral-300 border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800 transition-colors disabled:opacity-50"
                 >
-                  Export PDF
+                  {exporting ? "Exporting…" : "Export PDF"}
                 </button>
                 <button
                   onClick={() => { setMode("new"); setDraftText(""); }}
@@ -363,6 +405,46 @@ export default function SpecPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
       </div>
+
+      {/* Off-screen export zone — html2canvas captures this for PDF, never visible to user */}
+      {activeSpec && mode === "view" && (
+        <div
+          ref={exportZoneRef}
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            left: "-9999px",
+            top: 0,
+            width: "794px",
+            backgroundColor: "#ffffff",
+            padding: "56px 64px",
+            boxSizing: "border-box",
+            color: "#111111",
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          }}
+        >
+          <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#0f0f0f", margin: "0 0 6px 0" }}>
+            {projectName}
+          </h1>
+          <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 24px 0" }}>
+            Implementation Spec · v{activeSpec.version} · {new Date(activeSpec.generatedAt).toLocaleDateString()} · {STATUS_LABELS[activeSpec.status]}
+          </p>
+          <hr style={{ border: "none", borderTop: "1px solid #e5e5e5", margin: "0 0 32px 0" }} />
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {activeSpec.markdownContent}
+            </ReactMarkdown>
+          </div>
+          {activeSpec.diagramCode && (
+            <div style={{ marginTop: "48px", borderTop: "1px solid #e5e5e5", paddingTop: "32px" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: 600, color: "#0f0f0f", margin: "0 0 24px 0" }}>
+                Architecture Diagram
+              </h2>
+              <MermaidDiagram code={activeSpec.diagramCode} theme="light" />
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }
